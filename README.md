@@ -7,12 +7,15 @@
 - `Demodulator.py`: Demodulate and plot constellation.
 - `workspace.ipynb`: Detailed introduction in Chinese as well as project "playground".
 - `test.py`: A temporary file to test language features for a Python beginner. (Why it's here?)
+  
   > Remember to check your directory before `git add *.py`, please. XD
 
 ## Function List
 
 - Generate waveform in the form of single-channel, WDM, PDM.
+  
   > Signal generation of WDM and PDM is not tested yet!
+
 - Transmission of single-channel or WDM signal.
 - Coherent demodulation and constellation plot.
 
