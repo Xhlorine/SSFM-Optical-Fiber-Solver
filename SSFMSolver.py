@@ -1,13 +1,14 @@
 # Recursively Solve NLSE in optical fibers by SSFM
 import math
+from typing import Literal
 import numpy as np
 import matplotlib.pyplot as plt
 
 class SSFMSolver:
-    def __init__(self, alphaDB=0.0, beta=[15, 0], gamma=2, L=80, dz=0.5, title=None):
+    def __init__(self, alphaDB=0.0, beta=[15, 0], gamma=2, L=80, dz=0.5, title:str=None):
         self.setAlpha(alphaDB).setBeta(beta).setGamma(gamma).setL(L).setDz(dz).usePDM(False).setTitle(title)
 
-    def setAlpha(self, alpha, unit='dB'):
+    def setAlpha(self, alpha, unit:Literal['dB', 'linear', '1']='dB'):
         if unit == 'dB':
             self.alphaDB = alpha
             self.alpha = alpha / 4.343

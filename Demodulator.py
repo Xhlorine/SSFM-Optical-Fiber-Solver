@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import scipy.signal as sci
 
 class Demodulator:
-    def __init__(self, bps=1e6, fs=1e8, filter=[]):
-        self.setBps(bps).setFs(fs).setFilter(filter)
+    def __init__(self, bps=1e6, fs=1e8, filter=[], padding=0):
+        self.setBps(bps).setFs(fs).setFilter(filter).setPadding(padding)
 
     # Set bps
     def setBps(self, bps):
@@ -25,6 +25,11 @@ class Demodulator:
             print("Please set bps and fs first.")
         return self
     
+    # Set padding
+    def setPadding(self, padding):
+        self.padding = padding
+        return self
+    
     def setSignal(self, signal):
         self.signal = signal
         return self
@@ -43,7 +48,7 @@ class Demodulator:
         self.samples = np.zeros(self.n, dtype=complex)
         for i in range(self.n):
             self.samples[i] = np.sum(self.signal[(i*self.Ns):(i+1)*self.Ns] * sig)
-
+        self.samples = self.samples[self.padding:self.samples.size-self.padding]
         self.gate = np.sum(np.abs(sig)) / 2
         self.bits = (np.abs(self.samples) > self.gate).astype(int)
 

@@ -1,5 +1,6 @@
 # Generate waveform based on bits input.
 
+from typing import Literal
 import numpy as np
 import matplotlib.pyplot as plt
 from Demodulator import Demodulator
@@ -7,7 +8,9 @@ from Demodulator import Demodulator
 # Basic waveform generator
 class BasicWaveGenerator:
     # Constructor
-    def __init__(self, bps=1e6, fs=1e8, basicWave='Gaussian', alpha='auto'):
+    def __init__(self, bps=1e6, fs=1e8, 
+                 basicWave:Literal['Square', 'Gaussian', 'RaisedCosine', 'RC']='Gaussian', 
+                 alpha:float|Literal['auto']='auto'):
         self.setBps(bps).setFs(fs).setBasicWave(basicWave, alpha)
         self.generated = False
 
@@ -30,7 +33,9 @@ class BasicWaveGenerator:
         self.n = self.bits.size
         return self
     
-    def addZero(self, n):
+    # pad the signal with zeros. Usually 1~4 bits is enough
+    def addZero(self, n:int):
+        self.padding = n
         self.bits = self.zeroAdder(self.bits, n)
         self.n += n*2
         return self
@@ -39,7 +44,9 @@ class BasicWaveGenerator:
         return np.pad(np.array(bits), (n, n), 'constant', constant_values=0)
 
     # set waveform type
-    def setBasicWave(self, basicWave, alpha='auto'):
+    def setBasicWave(self, 
+                     basicWave:Literal['Square', 'Gaussian', 'RaisedCosine', 'RC']='Gaussian', 
+                     alpha:float|Literal['auto']='auto'):
         self.basicWave = basicWave
         if alpha == 'auto':
             if basicWave == 'Gaussian':
@@ -49,12 +56,11 @@ class BasicWaveGenerator:
                 self.alpha = 0.5
         else:
             if alpha == 0:
-                alpha = 1e-15
-            self.alpha = float(alpha)
+                self.alpha = float(1e-15)
         return self
 
     # Generate waveform
-    def generate(self, freqType='all'):
+    def generate(self, freqType:Literal['all', 'freq', 'omega']='all'):
         self.calcBasicInfo()
         self.waveform = self.generator(self.bits)
         self.generated = True
@@ -103,7 +109,7 @@ class BasicWaveGenerator:
         return waveform
         
     # Get waveform
-    def getWave(self, freqType='all'):
+    def getWave(self, freqType:Literal['all', 'freq', 'omega']='all'):
         if not self.generated:
             self.generate()
         if freqType == 'all':
@@ -149,21 +155,25 @@ class BasicWaveGenerator:
             print('Alpha: ', self.alpha)
 
     def demodulator(self):
-        return Demodulator(self.bps, self.fs, self.filter).setCorrectBits(self.bits)
+        return Demodulator(self.bps, self.fs, self.filter)\
+                .setCorrectBits(self.bits[self.padding:self.bits.size-self.padding])\
+                .setPadding(self.padding)
 
 
 # Wave Generator for WDM
 class WDMWaveGenerator(BasicWaveGenerator):
-    def __init__(self, bps=1e6, fs=1e8, basicWave='Gaussian', alpha='auto', freqCenter=0.0, freqInterval=5e10, channels=1):
-        self.setBps(bps).setFs(fs).setBasicWave(basicWave, alpha)
+    def __init__(self, bps=1e6, fs=1e8, 
+                 basicWave:Literal['Square', 'Gaussian', 'RaisedCosine', 'RC']='Gaussian',
+                 alpha:float|Literal['auto']='auto',
+                 freqCenter=0.0, freqInterval=5e10, channels=1):
+        self.setBps(bps).setFs(fs).setBasicWave(basicWave, alpha).setWDM(freqCenter, freqInterval, channels)
         self.generated = False
 
     def setWDM(self, freqCenter=0.0, freqInterval=5e10, channels=1):
         self.freqCenter = freqCenter
         self.freqInterval = freqInterval
         self.channels = channels
-        if self.fs < np.abs(self.freqInterval * self.channels / 2.0) + np.abs(self.freqCenter):
-            fs = 2 * (np.abs(self.freqInterval * self.channels / 2.0) + np.abs(self.freqCenter))
+        self.fs = np.max(self.fs, 2 * (np.abs(self.freqInterval * self.channels / 2.0) + np.abs(self.freqCenter))) 
         return self
     
     def setBits(self, bits):
@@ -194,7 +204,7 @@ class PDMWaveGenerator(WDMWaveGenerator):
         self.ybits = super().addZero(self.ybits, n)
         return self
 
-    def generate(self, freqType='all'):
+    def generate(self, freqType:Literal['all', 'freq', 'omega']='all'):
         self.calcBasicInfo()
         self.waveform = np.vstack((self.generator(self.xbits), self.generator(self.ybits)))
         self.generated = True
@@ -203,7 +213,7 @@ class PDMWaveGenerator(WDMWaveGenerator):
     def generator(self, bits):
         return super().generator(bits)
 
-    def getWave(self, freqType='all'):
+    def getWave(self, freqType:Literal['all', 'freq', 'omega']='all'):
         if not self.generated:
             self.generate()
         if freqType == 'all':
@@ -214,3 +224,8 @@ class PDMWaveGenerator(WDMWaveGenerator):
             return self.waveform, self.t, self.w
         else:
             print('Unknown frequency type')
+
+
+# Symbol mapping
+def symbolMapping(bits, mapping: Literal['OOK']='OOK'):
+    pass
