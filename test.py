@@ -85,5 +85,35 @@ import matplotlib.pyplot as plt
 # a = np.array(np.array([[1, 2, 3, 4, 5]]))
 # print(a.shape)
 
-arr = np.array([1, 2, 3, 4, 5])
-print(arr[0:5-0])
+
+# from WaveGenerator import symbolMapping
+
+# syms = np.array([1, 0, 1, 1, 0])
+# vals = symbolMapping(syms, 'OOK', maxEnergy=0.1)
+# print(vals)
+
+
+from WaveGenerator import BasicWaveGenerator
+from SSFMSolver import SSFMSolver
+
+gen = BasicWaveGenerator(bps=1e9, fs=4e12, basicWave='Gaussian')\
+    .setBits([0, 1, 0, 1, 1, 1, 0, 0, 1]).modulation(method='OOK', maxEnergy=1).addZero(4)
+gen.info()
+signal, t, f, w = gen.generate(freqType='all')
+
+fiber = SSFMSolver(alphaDB=0.2, beta=[15, 0], gamma=2, L=100, dz=0.5, title='test')
+fiber.setInput(signal*30, t, w)
+fiber.propagate()
+fiber.plot()
+
+# Demodulate
+dem = gen.demodulator()
+# original
+dem.setSignal(gen.waveform)
+dem.demodulate()
+dem.plotConstellation()
+# fiber: 100km
+dem.setSignal(fiber.output)
+dem.demodulate()
+dem.plotConstellation()
+print(dem.correct)

@@ -4,7 +4,6 @@ from Demodulator import Demodulator
 
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.signal as sci
 
 # Notice:
 # 1. When the time span is not wide enough, use function "addZero" to introduce padding bits.
@@ -14,18 +13,18 @@ if __name__ == '__main__':
     # SingleChannel, WDM, PDM
     example = 'SingleChannel'
     if example == 'SingleChannel':
-        gen = BasicWaveGenerator(bps=1e9, fs=2e11, basicWave='Gaussian').setBits([1, 0, 1, 1, 0])
-        gen.addZero(3)
+        gen = BasicWaveGenerator(bps=1e9, fs=4e12, basicWave='Gaussian').setBits([0, 0, 1, 1, 2, 2, 3, 3, 2, 2, 1, 2, 0])\
+                    .addZero(2).modulation('QPSK', maxEnergy=2)
         gen.info()
         signal, t, f, w = gen.generate(freqType='all')
         # gen.plot()
-        dem = Demodulator(gen.bps, gen.fs, gen.filter).setCorrectBits(gen.bits)
-        plt.show()
-        
-        fiber = SSFMSolver(alphaDB=0.2, beta=[3, 0], gamma=2, L=100, dz=0.5, title='test')
-        fiber.setInput(signal*30, t, w)
+        dem = gen.demodulator()
+        dem.setSignal(signal)
+        dem.demodulate()
+        dem.plotConstellation()
+
+        fiber = SSFMSolver(alphaDB=0.2, beta=[3, 0], gamma=2, L=100, dz=0.5, title='test').setInput(signal, t, w)
         fiber.propagate()
-        fiber.plot()
 
         dem.setSignal(fiber.output)
         dem.demodulate()

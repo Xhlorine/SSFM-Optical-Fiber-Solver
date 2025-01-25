@@ -3,7 +3,7 @@
 from typing import Literal
 import numpy as np
 import matplotlib.pyplot as plt
-from Demodulator import Demodulator
+from Demodulator import Demodulator, symbolMapping
 
 # Basic waveform generator
 class BasicWaveGenerator:
@@ -29,15 +29,22 @@ class BasicWaveGenerator:
     def setBits(self, bits):
         if isinstance(bits, (int, float, np.number)):
             bits = [bits]
-        self.bits = np.array(bits)
-        self.n = self.bits.size
+        self.raw = np.array(bits)
+        self.bits = self.raw
+        return self
+    
+    # set modulation method
+    def modulation(self,
+                      method: Literal['OOK', 'QPSK', '16QAM', '32QAM', '64QAM']='OOK',
+                      maxEnergy: float | np.number=None,
+                      leastEnergy: float | np.number=None,
+                      averageEnergy: float | np.number=None):
+        self.method = (method, maxEnergy, leastEnergy, averageEnergy)
         return self
     
     # pad the signal with zeros. Usually 1~4 bits is enough
     def addZero(self, n:int):
         self.padding = n
-        self.bits = self.zeroAdder(self.bits, n)
-        self.n += n*2
         return self
 
     def zeroAdder(self, bits, n):
@@ -56,12 +63,15 @@ class BasicWaveGenerator:
                 self.alpha = 0.5
         else:
             if alpha == 0:
-                self.alpha = float(1e-15)
+                alpha = 1e-20
+            self.alpha = alpha
         return self
 
     # Generate waveform
     def generate(self, freqType:Literal['all', 'freq', 'omega']='all'):
         self.calcBasicInfo()
+        self.bits = symbolMapping(self.raw, *self.method)
+        self.bits = self.zeroAdder(self.bits, self.padding)
         self.waveform = self.generator(self.bits)
         self.generated = True
         return self.getWave(freqType)
@@ -69,6 +79,7 @@ class BasicWaveGenerator:
     # Calc basic information
     def calcBasicInfo(self):
         try:
+            self.n = self.raw.size + 2*self.padding
             self.Ns = int(self.fs / self.bps)
             self.N = self.Ns * self.n
             self.t = np.arange(0, self.N/self.fs, 1/self.fs)[:self.N]
@@ -92,18 +103,17 @@ class BasicWaveGenerator:
                 base = np.ones(self.Ns)
                 waveform = np.kron(bits, base)
                 self.filter = np.fft.fftshift(np.fft.fft(base))
-                pass
             case 'Gaussian':
                 # Pass the Gaussian filter
-                self.filter =  np.exp(-self.alpha**2 * self.f**2)
-                waveform = np.real(np.fft.ifft(np.fft.fft(waveform) * np.fft.fftshift(self.filter)))
+                self.filter =  np.exp(-self.alpha**2 * self.f**2) * np.sqrt(self.Ns * self.alpha * self.bps * np.sqrt(2 / np.pi))
+                waveform = np.fft.ifft(np.fft.fft(waveform) * np.fft.fftshift(self.filter))
             case 'RaisedCosine' | 'RC':
                 # Pass the raised cosine filter
                 self.filter = np.zeros(self.N)
                 upper = np.abs(self.f) <= (1+self.alpha)*self.bps/2
                 self.filter[upper] = 0.5*(1 + np.cos(np.pi/self.alpha/self.bps * (np.abs(self.f[upper])-(1-self.alpha)*self.bps/2)))
                 self.filter[np.abs(self.f) <= (1-self.alpha)*self.bps] = 1
-                waveform = np.real(np.fft.ifft(np.fft.fft(waveform) * np.fft.fftshift(self.filter)))
+                waveform = np.fft.ifft(np.fft.fft(waveform) * np.fft.fftshift(self.filter))
             case _:
                 print('Unknown basic waveform type')
         return waveform
@@ -128,7 +138,7 @@ class BasicWaveGenerator:
 
         plt.figure(num='Waveform')
         plt.subplot(2, 1, 1)
-        plt.plot(self.t, self.waveform)
+        plt.plot(self.t, np.abs(self.waveform))
         plt.title('Waveform')
         plt.xlabel('Time (s)')
         plt.ylabel('Amplitude')
@@ -156,7 +166,7 @@ class BasicWaveGenerator:
 
     def demodulator(self):
         return Demodulator(self.bps, self.fs, self.filter)\
-                .setCorrectBits(self.bits[self.padding:self.bits.size-self.padding])\
+                .setCorrectBits(self.raw, self.method[0])\
                 .setPadding(self.padding)
 
 
@@ -225,7 +235,3 @@ class PDMWaveGenerator(WDMWaveGenerator):
         else:
             print('Unknown frequency type')
 
-
-# Symbol mapping
-def symbolMapping(bits, mapping: Literal['OOK']='OOK'):
-    pass
