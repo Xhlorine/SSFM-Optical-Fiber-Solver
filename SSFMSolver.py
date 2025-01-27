@@ -86,7 +86,7 @@ class SSFMSolver:
         freq = np.fft.fftshift(np.fft.fft(self.output))
         if np.average(np.max(freq[1:int(freq.size/10)])) > 0.1 * np.max(np.abs(freq)):
             print('[WARNING] You may need to increase fs to avoid aliasing.')
-        return self.output
+        return self.output * np.exp(self.alpha/2 * self.L)
     
     def plot(self):
         if self.title is not None:

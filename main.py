@@ -13,8 +13,8 @@ if __name__ == '__main__':
     # SingleChannel, WDM, PDM
     example = 'SingleChannel'
     if example == 'SingleChannel':
-        gen = BasicWaveGenerator(bps=1e9, fs=4e12, basicWave='Gaussian').setBits([0, 0, 1, 1, 2, 2, 3, 3, 2, 2, 1, 2, 0])\
-                    .addZero(2).modulation('QPSK', maxEnergy=2)
+        gen = BasicWaveGenerator(bps=1e9, fs=4e12, basicWave='Gaussian').setBits(np.arange(100))\
+                    .addZero(2).modulation('PAM', maxEnergy=100, minEnergy=0, symbolCount=100)
         gen.info()
         signal, t, f, w = gen.generate(freqType='all')
         # gen.plot()
@@ -23,10 +23,11 @@ if __name__ == '__main__':
         dem.demodulate()
         dem.plotConstellation()
 
-        fiber = SSFMSolver(alphaDB=0.2, beta=[3, 0], gamma=2, L=100, dz=0.5, title='test').setInput(signal, t, w)
-        fiber.propagate()
+        fiber = SSFMSolver(alphaDB=0.2, beta=[5, 0], gamma=2, L=100, dz=0.5, title='test').setInput(signal, t, w)
+        transmitted = fiber.propagate()
+        fiber.plot()
 
-        dem.setSignal(fiber.output)
+        dem.setSignal(transmitted)
         dem.demodulate()
         dem.plotConstellation()
     elif example == 'WDM':

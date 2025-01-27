@@ -35,11 +35,12 @@ class BasicWaveGenerator:
     
     # set modulation method
     def modulation(self,
-                      method: Literal['OOK', 'QPSK', '16QAM', '32QAM', '64QAM']='OOK',
+                      method: Literal['OOK', 'QPSK', '16QAM', '32QAM', '64QAM', 'PAM']='OOK',
                       maxEnergy: float | np.number=None,
-                      leastEnergy: float | np.number=None,
-                      averageEnergy: float | np.number=None):
-        self.method = (method, maxEnergy, leastEnergy, averageEnergy)
+                      minEnergy: float | np.number=None,
+                      averageEnergy: float | np.number=None,
+                      symbolCount: int | np.number=None):
+        self.method = (method, maxEnergy, minEnergy, averageEnergy, symbolCount)
         return self
     
     # pad the signal with zeros. Usually 1~4 bits is enough

@@ -51,7 +51,7 @@ class Demodulator:
         self.bits = np.zeros(self.n-self.padding*2, dtype=int)
         for i in range(self.n-self.padding*2):
             self.samples[i] = np.sum(self.signal[((i+self.padding)*self.Ns):(i+self.padding+1)*self.Ns] * sig)
-            self.bits[i] = np.argmin(np.abs(symbols[self.method] - self.samples[i]))
+            # self.bits[i] = np.argmin(np.abs(symbols[self.method] - self.samples[i]))
 
     def plotConstellation(self):
         plt.figure(num='Star plot')
@@ -89,19 +89,20 @@ symbols = {'OOK': OOK, 'QPSK': QPSK, '16QAM': QAM16, '32QAM': QAM32, '64QAM': QA
 del OOK, _temp, QPSK, QAM16, QAM32, QAM64
 
 def symbolMapping(bits: list | np.ndarray,
-                  method: Literal['OOK', 'QPSK', '16QAM', '32QAM', '64QAM']='OOK',
-                  maxEnergy: float | np.number=None,
-                  leastEnergy: float | np.number=None,
-                  averageEnergy: float | np.number=None):
+                  method: Literal['OOK', 'QPSK', '16QAM', '32QAM', '64QAM', 'PAM']='OOK',
+                  maxEnergy: float | np.number = None,
+                  minEnergy: float | np.number = None,
+                  averageEnergy: float | np.number = None,
+                  symbolCount: int | np.number = None):
+    if method == 'PAM':
+        symbols['PAM'] = np.linspace(minEnergy, maxEnergy, symbolCount)
     alphabet = symbols[method]
-
     if maxEnergy is not None:
         factor = np.sqrt(maxEnergy) / np.max(np.abs(alphabet))
-    elif leastEnergy is not None:
-        factor = np.sqrt(leastEnergy) / np.min(np.abs(alphabet))
+    elif minEnergy is not None:
+        factor = np.sqrt(minEnergy) / np.min(np.abs(alphabet))
     elif averageEnergy is not None:
         factor = np.sqrt(averageEnergy) / np.mean(np.abs(alphabet))
     else:
         factor = 1.0
-
     return np.array(alphabet[bits] * factor)
