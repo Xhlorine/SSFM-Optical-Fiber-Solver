@@ -3,7 +3,7 @@
 from typing import Literal
 import numpy as np
 import matplotlib.pyplot as plt
-from Demodulator import Demodulator, symbolMapping
+from Demodulator import Demodulator, symbolMapping, WDMDemodulator
 
 # Basic waveform generator
 class BasicWaveGenerator:
@@ -11,18 +11,20 @@ class BasicWaveGenerator:
     def __init__(self, bps=1e6, fs=1e8, 
                  basicWave:Literal['Square', 'Gaussian', 'RaisedCosine', 'RC']='Gaussian', 
                  alpha:float|Literal['auto']='auto'):
-        self.setBps(bps).setFs(fs).setBasicWave(basicWave, alpha)
+        self.setBps(bps).setFs(fs).setBasicWave(basicWave, alpha).addZero(0)
         self.generated = False
 
     # Set bps
     def setBps(self, bps):
         self.bps = bps
         self.fs = 20 * bps
+        self.generated = False
         return self
 
     # Set fs
     def setFs(self, fs):
         self.fs = fs
+        self.generated = False
         return self
     
     # set bits
@@ -30,7 +32,7 @@ class BasicWaveGenerator:
         if isinstance(bits, (int, float, np.number)):
             bits = [bits]
         self.raw = np.array(bits)
-        self.bits = self.raw
+        self.generated = False
         return self
     
     # set modulation method
@@ -41,11 +43,13 @@ class BasicWaveGenerator:
                       averageEnergy: float | np.number=None,
                       symbolCount: int | np.number=None):
         self.method = (method, maxEnergy, minEnergy, averageEnergy, symbolCount)
+        self.generated = False
         return self
     
     # pad the signal with zeros. Usually 1~4 bits is enough
     def addZero(self, n:int):
         self.padding = n
+        self.generated = False
         return self
 
     def zeroAdder(self, bits, n):
@@ -80,7 +84,7 @@ class BasicWaveGenerator:
     # Calc basic information
     def calcBasicInfo(self):
         try:
-            self.n = self.raw.size + 2*self.padding
+            self.n = self.raw.shape[-1] + 2*self.padding
             self.Ns = int(self.fs / self.bps)
             self.N = self.Ns * self.n
             self.t = np.arange(0, self.N/self.fs, 1/self.fs)[:self.N]
@@ -164,6 +168,7 @@ class BasicWaveGenerator:
             print(f'Half width: {self.alpha / np.pi * 1e12:.2f}ps')
         elif self.basicWave == 'RaisedCosine' or self.basicWave == 'RC':
             print('Alpha: ', self.alpha)
+        return self
 
     def demodulator(self):
         return Demodulator(self.bps, self.fs, self.filter)\
@@ -177,26 +182,36 @@ class WDMWaveGenerator(BasicWaveGenerator):
                  basicWave:Literal['Square', 'Gaussian', 'RaisedCosine', 'RC']='Gaussian',
                  alpha:float|Literal['auto']='auto',
                  freqCenter=0.0, freqInterval=5e10, channels=1):
-        self.setBps(bps).setFs(fs).setBasicWave(basicWave, alpha).setWDM(freqCenter, freqInterval, channels)
+        self.setBps(bps).setFs(fs).setBasicWave(basicWave, alpha).setWDM(freqCenter, freqInterval, channels).addZero(0)
         self.generated = False
 
     def setWDM(self, freqCenter=0.0, freqInterval=5e10, channels=1):
         self.freqCenter = freqCenter
         self.freqInterval = freqInterval
         self.channels = channels
-        self.fs = np.max(self.fs, 2 * (np.abs(self.freqInterval * self.channels / 2.0) + np.abs(self.freqCenter))) 
+        self.freqs = np.linspace(0, self.freqInterval*(self.channels-1), self.channels) - self.freqInterval*(self.channels-1)/2 + self.freqCenter
+        self.fs = max(self.fs, 2 * np.max(self.freqs) + self.freqInterval) 
         return self
     
     def setBits(self, bits):
-        self.bits = np.array(bits)
-        self.n = self.bits.shape[1]
+        self.raw = np.array(bits)
+        self.n = self.raw.shape[1]
         return self
     
+    def zeroAdder(self, bits, n):
+        return np.pad(np.array(bits), ((0, 0), (n, n)), 'constant', constant_values=0)
+    
     def generator(self, bits):
-        self.waveform = np.zeros((1, self.N))
+        self.waveform = np.zeros((self.N), dtype=complex)
         for i in range(self.channels):
-            waveform += super().generator(bits[i, :]) * np.exp(1j * 2*np.pi*(self.freqCenter+(i+(self.channels-1)/2)*self.freqInterval) * self.t)
-        return waveform
+            self.waveform += super().generator(bits[i, :]) * np.exp(1j * 2*np.pi*self.freqs[i] * self.t)
+        return self.waveform
+    
+    def demodulator(self):
+        return WDMDemodulator(self.bps, self.fs, self.filter)\
+                .setCorrectBits(self.raw, self.method[0])\
+                .setPadding(self.padding)\
+                .setWDM(self.freqCenter, self.freqInterval, self.channels)
     
     
 # Wave Generator for PDM
@@ -205,9 +220,9 @@ class PDMWaveGenerator(WDMWaveGenerator):
     def setBits(self, xbits, ybits):
         self.xbits = np.array(xbits)
         self.ybits = np.array(ybits)
-        self.n = max(self.xbits.size, self.ybits.size)
-        self.xbits = np.pad(self.xbits, (0, self.n - self.xbits.size), 'constant', constant_values=0)
-        self.ybits = np.pad(self.ybits, (0, self.n - self.ybits.size), 'constant', constant_values=0)
+        self.n = max(self.xbits.shape[-1], self.ybits.shape[-1])
+        self.xbits = np.pad(self.xbits, (0, self.n - self.xbits.shape[-1]), 'constant', constant_values=0)
+        self.ybits = np.pad(self.ybits, (0, self.n - self.ybits.shape[-1]), 'constant', constant_values=0)
         return self
     
     def addZero(self, n):

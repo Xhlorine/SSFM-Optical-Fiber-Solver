@@ -1,4 +1,4 @@
-from WaveGenerator import BasicWaveGenerator
+from WaveGenerator import BasicWaveGenerator, WDMWaveGenerator
 from SSFMSolver import SSFMSolver
 from Demodulator import Demodulator
 
@@ -11,7 +11,7 @@ import numpy as np
 
 if __name__ == '__main__':
     # SingleChannel, WDM, PDM
-    example = 'SingleChannel'
+    example = 'WDM'
     if example == 'SingleChannel':
         gen = BasicWaveGenerator(bps=1e9, fs=4e12, basicWave='Gaussian').setBits(np.arange(100))\
                     .addZero(2).modulation('PAM', maxEnergy=100, minEnergy=0, symbolCount=100)
@@ -23,15 +23,39 @@ if __name__ == '__main__':
         dem.demodulate()
         dem.plotConstellation()
 
-        fiber = SSFMSolver(alphaDB=0.2, beta=[5, 0], gamma=2, L=100, dz=0.5, title='test').setInput(signal, t, w)
+        fiber = SSFMSolver(alphaDB=0, beta=[0, 0], gamma=2, L=100, dz=0.5, title='test').setInput(signal, t, w)
         transmitted = fiber.propagate()
         fiber.plot()
 
         dem.setSignal(transmitted)
         dem.demodulate()
         dem.plotConstellation()
+
+        plt.figure(num='Phase Rotation')
+        plt.subplot(2, 1, 1)
+        plt.plot(gen.raw**2, np.unwrap(np.angle(dem.samples)))
+        plt.grid(True, 'both')
+        plt.subplot(2, 1, 2)
+        plt.plot(gen.raw**2, np.abs(dem.samples)**2)
+        plt.show()
+        print(np.sum(dem.filter**2))
     elif example == 'WDM':
-        pass
+        gen = WDMWaveGenerator(bps=1e9, fs=1e12).setWDM(freqCenter=2.5e10, freqInterval=5e10, channels=3)
+        gen.setBits([
+            [0, 1, 2, 3],
+            [0, 1, 2, 3],
+            [0, 1, 2, 3]
+        ]).modulation('QPSK', maxEnergy=1e-1).addZero(2).info()
+        wave, t, w = gen.generate('omega')
+
+        fiber = SSFMSolver(alphaDB=0, beta=[0, 0], gamma=2, L=80, dz=0.5, title='test').setInput(wave, t, w)
+        output = fiber.propagate()
+        fiber.plot()
+
+        dem = gen.demodulator()
+        dem.setSignal(output)
+        dem.demodulate()
+        dem.plotConstellation()
     elif example == 'PDM':
         pass
     else:
@@ -41,4 +65,3 @@ if __name__ == '__main__':
 # TODO:
 # 1. How to Demodulate? Refer to the paper from SHJU.
 # 2. Test WaveGenerator of WDM and PDM.
-# 3. Add property "padding" to de-addZero.

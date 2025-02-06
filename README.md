@@ -21,7 +21,7 @@
 
 ## Functions in the Future
 
-- More modulation methods: QPSK, 16QAM, 32QAM, 128QAM.
+- <del>More modulation methods: QPSK, 16QAM, 32QAM, 128QAM.</del>
 - More functional interfaces: color map of the whole propagation, animation of constellation rotation, etc.
 - Complete mathematical analysis over the Schrödinger Equation and digital simulation.
 - Acceleration leveraging NN and other AI tools.
