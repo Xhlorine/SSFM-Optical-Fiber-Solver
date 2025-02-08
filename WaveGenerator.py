@@ -217,37 +217,23 @@ class WDMWaveGenerator(BasicWaveGenerator):
 # Wave Generator for PDM
 class PDMWaveGenerator(WDMWaveGenerator):
 
-    def setBits(self, xbits, ybits):
-        self.xbits = np.array(xbits)
-        self.ybits = np.array(ybits)
-        self.n = max(self.xbits.shape[-1], self.ybits.shape[-1])
-        self.xbits = np.pad(self.xbits, (0, self.n - self.xbits.shape[-1]), 'constant', constant_values=0)
-        self.ybits = np.pad(self.ybits, (0, self.n - self.ybits.shape[-1]), 'constant', constant_values=0)
-        return self
-    
-    def addZero(self, n):
-        self.xbits = super().addZero(self.xbits, n)
-        self.ybits = super().addZero(self.ybits, n)
+    def setBits(self, xbits, ybits=None):
+        self.xraw = np.array(xbits)
+        if ybits is None:
+            self.yraw = np.zeros_like(self.xraw)
+        else:
+            self.yraw = np.array(ybits)
         return self
 
     def generate(self, freqType:Literal['all', 'freq', 'omega']='all'):
         self.calcBasicInfo()
-        self.waveform = np.vstack((self.generator(self.xbits), self.generator(self.ybits)))
+        sup = WDMWaveGenerator(self.bps, self.fs, self.basicWave, self.alpha, self.freqCenter, self.freqInterval, self.channels)
+        sup.addZero(self.padding).modulation(*self.method).setBits(self.xraw).generate()
+        self.xbits = sup.bits
+        xwave = sup.waveform
+        sup.setBits(self.yraw).generate()
+        self.ybits = sup.bits
+        ywave = sup.waveform
+        self.waveform = np.vstack((xwave, ywave))
         self.generated = True
         return self.getWave(freqType)
-    
-    def generator(self, bits):
-        return super().generator(bits)
-
-    def getWave(self, freqType:Literal['all', 'freq', 'omega']='all'):
-        if not self.generated:
-            self.generate()
-        if freqType == 'all':
-            return self.waveform, self.t, self.f, self.w
-        elif freqType == 'freq':
-            return self.waveform, self.t, self.f
-        elif freqType == 'omega':
-            return self.waveform, self.t, self.w
-        else:
-            print('Unknown frequency type')
-

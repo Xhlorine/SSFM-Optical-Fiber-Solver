@@ -95,6 +95,8 @@ import matplotlib.pyplot as plt
 
 # print(np.linspace(-1, 2, 4))
 
-alphabet = np.array([1, 2, 3, 4])
-index = np.array([[0, 1, 2, 3], [3, 2, 1, 0]])
-print(index[1, :])
+# alphabet = np.array([1, 2, 3, 4])
+# index = np.array([[0, 1, 2, 3], [3, 2, 1, 0]])
+# print(index[1, :])
+
+# Construct 2 threads to calculate

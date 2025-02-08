@@ -1,9 +1,10 @@
-from WaveGenerator import BasicWaveGenerator, WDMWaveGenerator
+from WaveGenerator import BasicWaveGenerator, WDMWaveGenerator, PDMWaveGenerator
 from SSFMSolver import SSFMSolver
 from Demodulator import Demodulator
 
 import matplotlib.pyplot as plt
 import numpy as np
+
 
 # Notice:
 # 1. When the time span is not wide enough, use function "addZero" to introduce padding bits.
@@ -48,16 +49,20 @@ if __name__ == '__main__':
         ]).modulation('QPSK', maxEnergy=1e-1).addZero(2).info()
         wave, t, w = gen.generate('omega')
 
-        fiber = SSFMSolver(alphaDB=0, beta=[0, 0], gamma=2, L=80, dz=0.5, title='test').setInput(wave, t, w)
+        fiber = SSFMSolver(alphaDB=0, beta=[5, 16], gamma=0, L=80, dz=0.5, title='test').setInput(wave, t, w)
         output = fiber.propagate()
         fiber.plot()
 
         dem = gen.demodulator()
         dem.setSignal(output)
         dem.demodulate()
-        dem.plotConstellation()
+        def globalMask(x):
+            mask = np.zeros(x.shape, dtype=bool)
+            mask[0, :] = True
+            return mask
+        dem.plotConstellation(codition=globalMask)
     elif example == 'PDM':
-        pass
+        gen = PDMWaveGenerator(bps=1e9, fs=1e12, basicWave='Gaussian').setBits([])
     else:
         print('Invalid example name.')
 

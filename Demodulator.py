@@ -55,7 +55,7 @@ class Demodulator:
         return self
 
     def plotConstellation(self, legend:bool=True):
-        plt.figure(num='Star plot')
+        plt.figure(num='Constellation')
         plt.subplot().set_aspect('equal')
         plt.axvline(0, c='g')
         plt.axhline(0, c='g')
@@ -104,6 +104,26 @@ class WDMDemodulator(Demodulator):
             self.samples[i, :] = sup.samples
             self.bits[i, :] = sup.bits
         return self
+    
+    def plotConstellation(self, legend = True,
+                          codition=lambda x: np.ones(x.shape, dtype=bool)):
+        globalMask = codition(self.correct)
+        plt.figure(num='Constellation')
+        plt.subplot().set_aspect('equal')
+        plt.axvline(0, c='g')
+        plt.axhline(0, c='g')
+        for i in range(symbols[self.method].size):
+            mask = (self.correct == i) & globalMask
+            plt.scatter(np.real(self.samples[mask]), np.imag(self.samples[mask]), marker='o', label=str(i), s=25)
+        if legend:
+            plt.legend()
+        plt.xlabel('Real')
+        plt.ylabel('Imag')
+        plt.title('Constellation')
+        plt.grid(True, 'major')
+        m = np.max(np.abs(np.hstack((np.real(self.samples), np.imag(self.samples))))) * 1.5
+        plt.axis(np.array([-1, 1, -1,  1]) * m)
+        plt.show()
 
 # Symbol mapping
 # By default, the least energy of all symbols is sqrt(2).
