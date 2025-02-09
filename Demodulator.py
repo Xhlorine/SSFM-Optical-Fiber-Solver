@@ -55,6 +55,8 @@ class Demodulator:
         return self
 
     def plotConstellation(self, legend:bool=True):
+        if not hasattr(self, 'samples'):
+            self.demodulate()
         plt.figure(num='Constellation')
         plt.subplot().set_aspect('equal')
         plt.axvline(0, c='g')

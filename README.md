@@ -6,7 +6,7 @@
 - `SSFMSolver.py`: Simulate the transmission of optical fiber by ***Split Step Fourier Method***.
 - `Demodulator.py`: Demodulate and plot constellation.
 - `workspace.ipynb`: Detailed introduction in Chinese as well as project "playground".
-- `test.py`: A temporary file to test language features for a Python beginner. (Why it's here?)
+- `experiment.ipynb`: A notebook for analytical experiments.
   
   > Remember to check your directory before `git add *.py`, please. XD
 
@@ -14,7 +14,7 @@
 
 - Generate waveform in the form of single-channel, WDM, PDM.
   
-  > Signal generation of WDM and PDM is not tested yet!
+  > Signal generation of PDM is not tested yet!
 
 - Transmission of single-channel or WDM signal.
 - Coherent demodulation and constellation plot.
@@ -31,7 +31,7 @@
 
 光纤传输的数值仿真计算，基于非线性薛定谔方程形式的脉冲传输方程，使用分步傅里叶法计算。
 
-目前可以求解不考虑偏振效应时的光纤传输，并能对单个频带进行解调。
+目前可以求解不考虑偏振效应时的光纤传输，并能绘制星座图（虽然理论不一定正确）。
 
-下一步将完善调制、解调方式，并让这几个类用起来更舒适（或许吧，别抱太大希望）。
+下一步将完善PDM，并让这几个类用起来更舒适（或许吧，别抱太大希望）。
 
