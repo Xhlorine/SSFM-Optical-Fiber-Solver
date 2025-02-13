@@ -12,7 +12,7 @@ import numpy as np
 
 if __name__ == '__main__':
     # SingleChannel, WDM, PDM
-    example = 'WDM'
+    example = 'PDM'
     if example == 'SingleChannel':
         gen = BasicWaveGenerator(bps=1e9, fs=4e12, basicWave='Gaussian').setBits(np.arange(100))\
                     .addZero(2).modulation('PAM', maxEnergy=100, minEnergy=0, symbolCount=100)
@@ -62,7 +62,14 @@ if __name__ == '__main__':
             return mask
         dem.plotConstellation(codition=globalMask)
     elif example == 'PDM':
-        gen = PDMWaveGenerator(bps=1e9, fs=1e12, basicWave='Gaussian').setBits([])
+        gen = PDMWaveGenerator(bps=1e9, fs=1e12, basicWave='Gaussian').setWDM(0, channels=3)\
+                .setBits(np.random.randint(0, 16, (3, 5)), np.random.randint(0, 16, (3, 5))).addZero(2).modulation('16QAM')
+        wave, t, w = gen.generate('omega')
+        gen.plot()
+
+        dem = gen.demodulator()
+        dem.setSignal(wave).demodulate()
+        dem.plotConstellation(legend=False)
     else:
         print('Invalid example name.')
 

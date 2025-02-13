@@ -127,6 +127,69 @@ class WDMDemodulator(Demodulator):
         plt.axis(np.array([-1, 1, -1,  1]) * m)
         plt.show()
 
+class PDMDemodulator(WDMDemodulator):
+    def __init__(self, bps=1000000, fs=100000000, filter=[], padding=0):
+        super().__init__(bps, fs, filter, padding)
+
+    def setCorrectBits(self, correctBitsX, correctBitsY, method):
+        self.correctX = correctBitsX
+        self.correctY = correctBitsY
+        self.method = method
+        return self
+
+    def demodulate(self):
+        sup = WDMDemodulator(self.bps, self.fs, self.filter, self.padding).setWDM(self.freqCenter, self.freqInterval, self.channels)
+        self.samplesX = np.zeros_like(self.correctX, dtype=complex)
+        self.samplesY = np.zeros_like(self.correctX, dtype=complex)
+        self.bitsX = np.zeros_like(self.correctX, dtype=int)
+        self.bitsY = np.zeros_like(self.correctX, dtype=int)
+        # x-axis
+        sup.setCorrectBits(self.correctX, self.method).setSignal(self.signal[0, :]).demodulate()
+        self.samplesX = sup.samples
+        self.bitsX = sup.bits
+        # y-axis
+        sup.setCorrectBits(self.correctX, self.method).setSignal(self.signal[1, :]).demodulate()
+        self.samplesY = sup.samples
+        self.bitsY = sup.bits
+    
+    def plotConstellation(self, legend=True, codition=lambda x: np.ones(x.shape, dtype=bool)):
+        plt.figure(num='Constellation')
+        # x plot
+        globalMask = codition(self.correctX)
+        plt.subplot(121).set_aspect('equal')
+        plt.axvline(0, c='g')
+        plt.axhline(0, c='g')
+        for i in range(symbols[self.method].size):
+            mask = (self.correctX == i) & globalMask
+            plt.scatter(np.real(self.samplesX[mask]), np.imag(self.samplesX[mask]), marker='o', label=str(i), s=25)
+        if legend:
+            plt.legend()
+        plt.xlabel('Real')
+        plt.ylabel('Imag')
+        plt.title('X - Constellation')
+        plt.grid(True, 'major')
+        m = np.max(np.abs(np.hstack((np.real(self.samplesX), np.imag(self.samplesX))))) * 1.5
+        plt.axis(np.array([-1, 1, -1,  1]) * m)
+        # y plot
+        globalMask = codition(self.correctY)
+        plt.subplot(122).set_aspect('equal')
+        plt.axvline(0, c='g')
+        plt.axhline(0, c='g')
+        for i in range(symbols[self.method].size):
+            mask = (self.correctY == i) & globalMask
+            plt.scatter(np.real(self.samplesY[mask]), np.imag(self.samplesY[mask]), marker='o', label=str(i), s=25)
+        if legend:
+            plt.legend()
+        plt.xlabel('Real')
+        plt.ylabel('Imag')
+        plt.title('Y - Constellation')
+        plt.grid(True, 'major')
+        m = np.max(np.abs(np.hstack((np.real(self.samplesY), np.imag(self.samplesY))))) * 1.5
+        plt.axis(np.array([-1, 1, -1,  1]) * m)
+        plt.subplots_adjust(wspace=0.3)
+        plt.show()
+
+
 # Symbol mapping
 # By default, the least energy of all symbols is sqrt(2).
 OOK = np.array([0, 1], dtype=complex)

@@ -3,7 +3,7 @@
 from typing import Literal
 import numpy as np
 import matplotlib.pyplot as plt
-from Demodulator import Demodulator, symbolMapping, WDMDemodulator
+from Demodulator import Demodulator, symbolMapping, WDMDemodulator, PDMDemodulator
 
 # Basic waveform generator
 class BasicWaveGenerator:
@@ -224,11 +224,23 @@ class PDMWaveGenerator(WDMWaveGenerator):
         else:
             self.yraw = np.array(ybits)
         return self
+    
+    def calcBasicInfo(self):
+        try:
+            self.n = self.xraw.shape[-1] + 2*self.padding
+            self.Ns = int(self.fs / self.bps)
+            self.N = self.Ns * self.n
+            self.t = np.arange(0, self.N/self.fs, 1/self.fs)[:self.N]
+            self.f = np.arange(-self.fs/2, self.fs/2, self.bps/self.n)[:self.N]
+            self.w = 2*np.pi*self.f
+        except AttributeError:
+            print('Some attributes are missing. Please set bps, fs, and basicWave first.')
 
     def generate(self, freqType:Literal['all', 'freq', 'omega']='all'):
         self.calcBasicInfo()
         sup = WDMWaveGenerator(self.bps, self.fs, self.basicWave, self.alpha, self.freqCenter, self.freqInterval, self.channels)
         sup.addZero(self.padding).modulation(*self.method).setBits(self.xraw).generate()
+        self.filter = sup.filter
         self.xbits = sup.bits
         xwave = sup.waveform
         sup.setBits(self.yraw).generate()
@@ -237,3 +249,44 @@ class PDMWaveGenerator(WDMWaveGenerator):
         self.waveform = np.vstack((xwave, ywave))
         self.generated = True
         return self.getWave(freqType)
+    
+    def plot(self):
+        if not self.generated:
+            self.generate()
+
+        plt.figure(num='X - Waveform')
+        plt.subplot(221)
+        plt.plot(self.t, np.abs(self.waveform[0, :]))
+        plt.title('Waveform')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Amplitude')
+        plt.grid(True, 'major')
+
+        plt.subplot(223)
+        plt.plot(self.f, np.abs(np.fft.fftshift(np.fft.fft(self.waveform[0, :]))))
+        plt.title('X - Frequency Spectrum')
+        plt.xlabel('Frequency (Hz)')
+        plt.ylabel('Magnitude')
+        plt.grid(True, 'major')
+
+        plt.subplot(222)
+        plt.plot(self.t, np.abs(self.waveform[1, :]))
+        plt.title('Y - Waveform')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Amplitude')
+        plt.grid(True, 'major')
+
+        plt.subplot(224)
+        plt.plot(self.f, np.abs(np.fft.fftshift(np.fft.fft(self.waveform[1, :]))))
+        plt.title('Y - Frequency Spectrum')
+        plt.xlabel('Frequency (Hz)')
+        plt.ylabel('Magnitude')
+        plt.grid(True, 'major')
+        
+        plt.subplots_adjust(hspace=0.5, wspace=0.4)
+        plt.show()
+    
+    def demodulator(self):
+        return PDMDemodulator(self.bps, self.fs, self.filter, self.padding)\
+                .setWDM(self.freqCenter, self.freqInterval, self.channels)\
+                .setCorrectBits(self.xraw, self.yraw, self.method[0])
