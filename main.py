@@ -12,25 +12,25 @@ import numpy as np
 
 if __name__ == '__main__':
     # SingleChannel, WDM, PDM
-    example = 'PDM'
+    example = 'SingleChannel'
     if example == 'SingleChannel':
         gen = BasicWaveGenerator(bps=1e9, fs=4e12, basicWave='Gaussian').setBits(np.arange(100))\
-                    .addZero(2).modulation('PAM', maxEnergy=100, minEnergy=0, symbolCount=100)
+                    .addZero(10).modulation('PAM', maxEnergy=100, minEnergy=0, symbolCount=100)
         gen.info()
         signal, t, f, w = gen.generate(freqType='all')
         # gen.plot()
         dem = gen.demodulator()
         dem.setSignal(signal)
         dem.demodulate()
-        dem.plotConstellation()
+        dem.plotConstellation(False)
 
-        fiber = SSFMSolver(alphaDB=0, beta=[0, 0], gamma=2, L=100, dz=0.5, title='test').setInput(signal, t, w)
+        fiber = SSFMSolver(alphaDB=0, beta=[-5, 0], gamma=2, L=200, dz=2, title='test').setInput(signal, t, w)
         transmitted = fiber.propagate()
         fiber.plot()
 
         dem.setSignal(transmitted)
         dem.demodulate()
-        dem.plotConstellation()
+        dem.plotConstellation(False)
 
         plt.figure(num='Phase Rotation')
         plt.subplot(2, 1, 1)

@@ -64,22 +64,38 @@ class SSFMSolver:
     def nonlinearOperatorPDM(self, start):
         return start
 
-    def propagate(self):
+    def propagate(self, plot:bool=True):
         # symmetric SSFM
         if self.enablePDM:
             nonlinearStep = self.nonlinearOperatorPDM
+            # self.propagateMap = np.zeros((self.input.size, int(self.L/self.dz)))
         else:
             nonlinearStep = self.nonlinearOperator
-            linearStep = self.linearOperator(self.dz)
-            linearStepHalf = self.linearOperator(self.dz / 2)
+            self.propagateMap = np.zeros((self.input.size, int(self.L/self.dz)))
+        linearStep = self.linearOperator(self.dz)
+        linearStepHalf = self.linearOperator(self.dz / 2)
         self.output = self.input
         # Iterations
         self.output = np.fft.ifft(np.fft.fft(self.output) * np.fft.fftshift(linearStepHalf))
         for i in range(0, int(self.L/self.dz)-1):
             self.output = nonlinearStep(self.output)
+            self.propagateMap[:, i] = np.abs(self.output * np.exp(self.alpha/2 * self.dz * i))
             self.output = np.fft.ifft(np.fft.fft(self.output) * np.fft.fftshift(linearStep))
         self.output = nonlinearStep(self.output)
         self.output = np.fft.ifft(np.fft.fft(self.output) * np.fft.fftshift(linearStepHalf))
+        self.propagateMap[:, -1] = np.abs(self.output * np.exp(self.alpha/2 * self.L))
+        # plot color map
+        if plot:
+            if self.title is not None:
+                plt.figure(num=self.title)
+            else:
+                plt.figure()
+            plt.imshow(np.abs(self.propagateMap), aspect='auto', cmap='jet', extent=[0, self.L, 0, self.t[-1]])
+            plt.xlabel('Distance (km)')
+            plt.ylabel('Time (ps)')
+            plt.title('Propagation Map')
+            plt.colorbar()
+            plt.show()
         # Check parameters
         if np.average(np.abs(self.output[1:10])) > 0.1 * np.max(np.abs(self.output)):
             print('[WARNING] You may need to pad the signal with zeros to avoid edge effects.')

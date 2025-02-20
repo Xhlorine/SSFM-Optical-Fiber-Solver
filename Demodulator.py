@@ -207,13 +207,18 @@ symbols = {'OOK': OOK, 'QPSK': QPSK, '16QAM': QAM16, '32QAM': QAM32, '64QAM': QA
 del OOK, _temp, QPSK, QAM16, QAM32, QAM64
 
 def symbolMapping(bits: list | np.ndarray,
-                  method: Literal['OOK', 'QPSK', '16QAM', '32QAM', '64QAM', 'PAM']='OOK',
+                  method: Literal['OOK', 'QPSK', '16QAM', '32QAM', '64QAM', 'PAM', 'MAN']='OOK',
                   maxEnergy: float | np.number = None,
                   minEnergy: float | np.number = None,
                   averageEnergy: float | np.number = None,
-                  symbolCount: int | np.number = None):
+                  symbolCount: int | np.number = None, 
+                  choices: np.ndarray | list = None):
     if method == 'PAM':
         symbols['PAM'] = np.linspace(minEnergy, maxEnergy, symbolCount)
+    elif method == 'MAN':
+        symbols['MAN'] = np.array(choices)
+    else:
+        pass
     alphabet = symbols[method]
     if maxEnergy is not None:
         factor = np.sqrt(maxEnergy) / np.max(np.abs(alphabet))
